@@ -1,8 +1,8 @@
 options = {
-        "email" : "tavin4682@gmail.com",
-        "password" : "ScYL5aM5nwAz",
+        "email" : "user@example.com",
+        "password" : "password",
         "address" : "localhost",
         "port" : 25565,
-        "username" : "Duckana",
+        "username" : "MyUsername",
         "offline" : False
     }
