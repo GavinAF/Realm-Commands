@@ -146,4 +146,8 @@ dmypy.json
 !.vscode/extensions.json
 *.code-workspace
 
-# End of https://www.toptal.com/developers/gitignore/api/python,vscode
+# Auth Token
+.rc-auth-tokens
+
+# Home/Spawn Database
+mc_server.db
