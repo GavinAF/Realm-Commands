@@ -111,6 +111,21 @@ def main():
         2 : ""
     }
 
+    # Create database if it doesn't exist
+    if not os.path.exists("mc_server.db"):
+        try:
+            conn = sqlite3.connect("mc_server.db")
+            create_homes_query = """ CREATE TABLE IF NOT EXISTS homes(home_id INTEGER PRIMARY KEY, user TEXT, x TEXT, y TEXT, z TEXT) """
+
+            c = conn.cursor()
+            c.execute(create_homes_query)
+
+        except sqlite3.Error as e:
+            print(f"Unable to create database: {e}")
+        finally:
+            if conn:
+                conn.close()
+
 
     def teleport(x, name):
         if len(x) != 2:
