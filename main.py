@@ -126,7 +126,7 @@ def main():
         now = datetime.now()
         dt_str = now.strftime("%m/%d/%Y %H:%M:%S")
         with open("log.txt", "a") as f:
-            f.write(f"[{dt_str}] Teleported {name} to {x[1]}")
+            f.write(f"[{dt_str}] Teleported {name} to {x[1]}\n")
 
     def sethome(x, name):
         # Check valid arguments
@@ -166,7 +166,7 @@ def main():
         now = datetime.now()
         dt_str = now.strftime("%m/%d/%Y %H:%M:%S")
         with open("log.txt", "a") as f:
-            f.write(f"[{dt_str}] Set {name} home to {x} {y} {z}")
+            f.write(f"[{dt_str}] Set {name} home to {x} {y} {z}\n")
 
     def home(name):
         dbcon = sqlite3.connect("mc_server.db")
@@ -199,7 +199,7 @@ def main():
         now = datetime.now()
         dt_str = now.strftime("%m/%d/%Y %H:%M:%S")
         with open("log.txt", "a") as f:
-            f.write(f"[{dt_str}] Sent {name} home")
+            f.write(f"[{dt_str}] Sent {name} home\n")
 
     if options['offline']:
         print("Connecting in offline mode...")
