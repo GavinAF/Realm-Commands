@@ -5,18 +5,16 @@ from __future__ import print_function
 import getpass
 import sys
 import re
-
 import time
-
 import sqlite3
 import threading
+import json
+from datetime import datetime
 
 from minecraft import authentication
 from minecraft.exceptions import YggdrasilError
 from minecraft.networking.connection import Connection
 from minecraft.networking.packets import Packet, clientbound, serverbound, PlayerPositionAndLookPacket
-
-import json
 
 from conf import options
 
@@ -43,6 +41,11 @@ def main():
         packet.message = ("/tp %s %s" % (name, x[1]))
         connection.write_packet(packet)
         print("Teleported %s to %s" % (name, x[1]))
+
+        now = datetime.now()
+        dt_str = now.strftime("%m/%d/%Y %H:%M:%S")
+        with open("log.txt", "a") as f:
+            f.write(f"[{dt_str}] Teleported {name} to {x[1]}")
 
     def sethome(x, name):
         # Check valid arguments
@@ -77,6 +80,13 @@ def main():
 
         print("Set home location to: %s, %s, %s" % (str(my_pos[0]), str(my_pos[1]), str(my_pos[2])))
 
+        x, y, z = my_pos[0], my_pos[1], my_pos[2]
+
+        now = datetime.now()
+        dt_str = now.strftime("%m/%d/%Y %H:%M:%S")
+        with open("log.txt", "a") as f:
+            f.write(f"[{dt_str}] Set {name} home to {x} {y} {z}")
+
     def home(name):
         dbcon = sqlite3.connect("mc_server.db")
         cur = dbcon.cursor()
@@ -104,6 +114,11 @@ def main():
         dbcon.close()
 
         print("Teleported %s to their home" % (name))
+
+        now = datetime.now()
+        dt_str = now.strftime("%m/%d/%Y %H:%M:%S")
+        with open("log.txt", "a") as f:
+            f.write(f"[{dt_str}] Sent {name} home")
 
     if options['offline']:
         print("Connecting in offline mode...")
