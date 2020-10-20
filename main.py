@@ -10,13 +10,94 @@ import sqlite3
 import threading
 import json
 from datetime import datetime
+import stat
+import os
 
-from minecraft import authentication
+import minecraft.authentication as authentication
 from minecraft.exceptions import YggdrasilError
 from minecraft.networking.connection import Connection
 from minecraft.networking.packets import Packet, clientbound, serverbound, PlayerPositionAndLookPacket
 
 from conf import options
+
+AUTH_TOKENS_FILE      = '.rc-auth-tokens'
+AUTH_TOKENS_MODE      = stat.S_IRUSR | stat.S_IWUSR
+AUTH_TOKENS_MODE_WARN = stat.S_IRWXG | stat.S_IRWXO
+
+auth_token = None
+
+def load_auth_tokens(file_path=AUTH_TOKENS_FILE):
+    if os.path.exists(file_path):
+        with open(file_path) as f:
+            if os.name == 'posix':
+                fstat = os.fstat(f.fileno())
+                fmode = stat.S_IMODE(fstat.st_mode)
+                if fmode & AUTH_TOKENS_MODE_WARN:
+                    print('Warning: %s is not protected from access by other users (access mode %03o; should be %03o)' % (AUTH_TOKENS_FILE, fmode, AUTH_TOKENS_MODE), file=sys.stderr)
+                    
+                try:
+                    return json.load(f)
+                except ValueError:
+                    pass
+    return {}
+
+def save_auth_tokens(auth_tokens, file_path=AUTH_TOKENS_FILE):
+    exists = os.path.exists(file_path)
+    with open(file_path, "w") as f:
+        json.dump(auth_tokens, f, indent=4)
+        if not exists and os.name == "posix":
+            os.chmod(f.fileno(), AUTH_TOKENS_MODE)
+
+def authenticate_save(tokens=None):
+    global auth_token
+
+    lusername = options['username'].lower()
+    if tokens is None:
+        tokens = load_auth_tokens()
+    if auth_token is not None:
+        tokens[lusername] = {
+            'accessToken': auth_token.access_token,
+            'clientToken': auth_token.client_token}
+    elif lusername in tokens:
+        del tokens[lusername]
+
+    if tokens.get(lusername) != auth_token:
+        save_auth_tokens(tokens)
+
+def authenticateAccount():
+    global auth_token
+
+    if options["offline"]:
+        auth_token = None
+        return None
+    
+    tokens = load_auth_tokens()
+    if auth_token is None:
+        token = tokens.get(options['username'].lower())
+        if token is not None:
+            auth_token = authentication.AuthenticationToken(
+                username=options['username'],
+                access_token=token['accessToken'],
+                client_token=token['clientToken'])
+
+    if auth_token is not None:
+        try:
+            auth_token.refresh()
+        except YggdrasilError:
+            auth_token = None
+
+    if auth_token is None:
+        try:
+            auth_token = authentication.AuthenticationToken()
+            auth_token.authenticate(options['email'], options['password'])
+
+        except YggdrasilError:
+            auth_token = None
+            authenticate_save(tokens=tokens)
+            raise
+    authenticate_save(tokens=tokens)
+    return auth_token
+
 
 def main():
 
@@ -126,15 +207,15 @@ def main():
             options['address'], options['port'], username=options['username'])
     else:
         # Connect client to server
-        auth_token = authentication.AuthenticationToken()
-        try:
-            auth_token.authenticate(options['email'], options['password'])
-        except YggdrasilError as e:
-            print(e)
-            sys.exit()
-        print("Logging in as %s..." % auth_token.username)
+        # auth_token = authentication.AuthenticationToken()
+        # try:
+        #     auth_token.authenticate(options['email'], options['password'])
+        # except YggdrasilError as e:
+        #     print(e)
+        #     sys.exit()
+        # print("Logging in as %s..." % auth_token.username)
         connection = Connection(
-            options['address'], options['port'], auth_token=auth_token)
+            options['address'], options['port'], auth_token=authenticateAccount())
 
     def handle_join_game(join_game_packet):
         print('Client Connected.')
