@@ -28,14 +28,16 @@ auth_token = None
 
 def load_auth_tokens(file_path=AUTH_TOKENS_FILE):
     if os.path.exists(file_path):
+        print("Auth Token File Exists")
         with open(file_path) as f:
-            if os.name == 'posix':
+            if os.name == 'nt':
                 fstat = os.fstat(f.fileno())
                 fmode = stat.S_IMODE(fstat.st_mode)
                 if fmode & AUTH_TOKENS_MODE_WARN:
                     print('Warning: %s is not protected from access by other users (access mode %03o; should be %03o)' % (AUTH_TOKENS_FILE, fmode, AUTH_TOKENS_MODE), file=sys.stderr)
                     
                 try:
+                    print("Returning json of token file")
                     return json.load(f)
                 except ValueError:
                     pass
@@ -45,7 +47,7 @@ def save_auth_tokens(auth_tokens, file_path=AUTH_TOKENS_FILE):
     exists = os.path.exists(file_path)
     with open(file_path, "w") as f:
         json.dump(auth_tokens, f, indent=4)
-        if not exists and os.name == "posix":
+        if not exists and os.name == "nt":
             os.chmod(f.fileno(), AUTH_TOKENS_MODE)
 
 def authenticate_save(tokens=None):
@@ -75,6 +77,7 @@ def authenticateAccount():
     if auth_token is None:
         token = tokens.get(options['username'].lower())
         if token is not None:
+            print("Authenticating user from token!")
             auth_token = authentication.AuthenticationToken(
                 username=options['username'],
                 access_token=token['accessToken'],
@@ -88,6 +91,7 @@ def authenticateAccount():
 
     if auth_token is None:
         try:
+            print("Creating new authentication via MC API")
             auth_token = authentication.AuthenticationToken()
             auth_token.authenticate(options['email'], options['password'])
 
