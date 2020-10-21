@@ -36,13 +36,18 @@ Teleportation & home system for non-op players on a Minecraft Realm server
 
 2.  Enter your information into `conf.py`
 
-3.  Run `main.py` to start the bot:
+3.  Invite spare account to Realm
+
+4.  OP/Promote the account using the Realm's control panel
+
+5.  Accept invite on spare account through Minecraft client
+
+6.  Run `main.py` to start the bot:
     ```
     python main.py
     ```
-4.  OP/Promote the account using the realm's control panel
 
-5. Recommend putting bot account into spectator mode
+7. Recommend putting bot account into spectator mode
 
 ## Commands
 All commands have a prefix of !
