@@ -12,19 +12,26 @@ import json
 from datetime import datetime
 import stat
 import os
+import requests
 
 import minecraft.authentication as authentication
 from minecraft.exceptions import YggdrasilError
 from minecraft.networking.connection import Connection
-from minecraft.networking.packets import Packet, clientbound, serverbound, PlayerPositionAndLookPacket
+from minecraft.networking.packets import Packet, clientbound, serverbound, PlayerPositionAndLookPacket, PositionAndLookPacket
 
 from conf import options
 
-AUTH_TOKENS_FILE      = '.rc-auth-tokens'
+REALMS_API_WORLDS     = "https://pc.realms.minecraft.net/worlds"
+
+AUTH_TOKENS_FILE      = ".rc-auth-tokens"
 AUTH_TOKENS_MODE      = stat.S_IRUSR | stat.S_IWUSR
 AUTH_TOKENS_MODE_WARN = stat.S_IRWXG | stat.S_IRWXO
 
 auth_token = None
+
+def REALM_API_JOIN(server_id):
+    url = f"https://pc.realms.minecraft.net/worlds/v1/{server_id}/join/pc"
+    return url
 
 def load_auth_tokens(file_path=AUTH_TOKENS_FILE):
     if os.path.exists(file_path):
@@ -68,10 +75,6 @@ def authenticate_save(tokens=None):
 
 def authenticateAccount():
     global auth_token
-
-    if options["offline"]:
-        auth_token = None
-        return None
     
     tokens = load_auth_tokens()
     if auth_token is None:
@@ -102,6 +105,36 @@ def authenticateAccount():
     authenticate_save(tokens=tokens)
     return auth_token
 
+def connectRealm():
+
+    serverID = None
+
+    auth = authenticateAccount()
+
+    cookies = {
+        "sid": f"token:{auth.access_token}:{auth.profile.id_}",
+        "user": options['username'],
+        "version": options['version']
+    }
+
+    worlds = requests.get(REALMS_API_WORLDS, cookies=cookies)
+    worlds = worlds.json()
+
+    servers = worlds['servers']
+
+    for server in servers:
+        if server['name'] == options['rname']:
+            serverID = server['id']
+        else:
+            sys.exit("Cannot access or find Realm! Be sure to validate credentials in conf.py and account has accepted invite to Realm")
+    
+    connectInfo = requests.get(REALM_API_JOIN(serverID), cookies=cookies)
+    connectInfo = connectInfo.json()
+
+    ip, port = connectInfo['address'].split(":")
+    port = int(port)
+
+    return Connection(ip, port, auth_token=auth)
 
 def main():
 
@@ -148,16 +181,7 @@ def main():
             f.write(f"[{dt_str}] Teleported {name} to {x[1]}\n")
 
     def sethome(x, name):
-        # Check valid arguments
-        # if len(x) != 4:
-
-        #     packet = serverbound.play.ChatPacket()
-        #     packet.message = ("/msg %s Failed! - Usage: !sethome X Y Z" % (name))
-        #     connection.write_packet(packet)
-
-        #     print("SetHome Failed - Missing Arguments")
-        #     return
-
+ 
         packet = serverbound.play.ChatPacket()
         packet.message = ("/tp %s" % (name))
         connection.write_packet(packet)
@@ -168,7 +192,7 @@ def main():
         packet.message = ("/tp ~ ~ ~")
         connection.write_packet(packet)
 
-        # Connect to db and set || re-set home coords
+        # Connect to db and set home coords
         dbcon = sqlite3.connect("mc_server.db")
         cur = dbcon.cursor()
 
@@ -220,21 +244,8 @@ def main():
         with open("log.txt", "a") as f:
             f.write(f"[{dt_str}] Sent {name} home\n")
 
-    if options['offline']:
-        print("Connecting in offline mode...")
-        connection = Connection(
-            options['address'], options['port'], username=options['username'])
-    else:
-        # Connect client to server
-        # auth_token = authentication.AuthenticationToken()
-        # try:
-        #     auth_token.authenticate(options['email'], options['password'])
-        # except YggdrasilError as e:
-        #     print(e)
-        #     sys.exit()
-        # print("Logging in as %s..." % auth_token.username)
-        connection = Connection(
-            options['address'], options['port'], auth_token=authenticateAccount())
+
+    connection = connectRealm()
 
     def handle_join_game(join_game_packet):
         print('Client Connected.')
@@ -255,18 +266,19 @@ def main():
             if name != options['username']:
                 print("%s : %s" % (name, message))
 
-            if message[0] == "!":
-                x = message.split()
+            if message is not None and len(message) > 1:
+                if message[0] == "!":
+                    x = message.split()
 
-                if x[0] == "!tp":
-                    teleport(x, name)
-                elif x[0] == "!sethome":
-                    sethome(x, name)
-                elif x[0] == "!home":
-                    home(name)
-                else:
-                    print("Invalid Command :(")
-       
+                    if x[0] == "!tp":
+                        teleport(x, name)
+                    elif x[0] == "!sethome":
+                        sethome(x, name)
+                    elif x[0] == "!home":
+                        home(name)
+                    else:
+                        print("Invalid Command :(")
+            
     lock = threading.Lock()
     pos_look = PlayerPositionAndLookPacket.PositionAndLook()
 
