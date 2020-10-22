@@ -1,6 +1,6 @@
 
 # Realm Commands
-Teleportation & home system for non-op players on a Minecraft Realm server
+Teleportation & home system for non-op players on a Minecraft Realm
 
 ## Contents
 1. [Dependencies](#dependencies)
@@ -54,14 +54,17 @@ All commands have a prefix of !
 
 * Teleport
 	```
-	!tp [name]
+	!tp <name>
 	```
 * Set Home
 	```
-	!sethome
+	!sethome <x> <y> <z>
 	```
 * Home
 	```
 	!home
 	```
+	
+## Known Bugs
+* Sethome coord lag - reverted back to manual input
 
