@@ -181,16 +181,18 @@ def main():
             f.write(f"[{dt_str}] Teleported {name} to {x[1]}\n")
 
     def sethome(x, name):
- 
-        packet = serverbound.play.ChatPacket()
-        packet.message = ("/tp %s" % (name))
-        connection.write_packet(packet)
 
-        time.sleep(.5)
+        # Check valid arguments
+        if len(x) != 4:
 
-        packet = serverbound.play.ChatPacket()
-        packet.message = ("/tp ~ ~ ~")
-        connection.write_packet(packet)
+            packet = serverbound.play.ChatPacket()
+            packet.message = ("/msg %s Failed! - Usage: !sethome X Y Z" % (name))
+            connection.write_packet(packet)
+
+            print("SetHome Failed - Missing Arguments")
+            return
+
+        x, y, z = str(x[1]), str(x[2]), str(x[3])        
 
         # Connect to db and set home coords
         dbcon = sqlite3.connect("mc_server.db")
@@ -199,12 +201,14 @@ def main():
         command1 = """ insert or replace into homes (home_id, user, x, y, z) values
                         ((select home_id from homes where user = ?), ?, ?, ?, ?) """
 
-        cur.execute(command1, (str(name), str(name), str(my_pos[0]), str(my_pos[1]), str(my_pos[2]), ))
+        cur.execute(command1, (str(name), str(name), x, y, z, ))
         dbcon.commit()
 
-        print("Set home location to: %s, %s, %s" % (str(my_pos[0]), str(my_pos[1]), str(my_pos[2])))
+        packet = serverbound.play.ChatPacket()
+        packet.message = (f"/msg {name} Home Set!")
+        connection.write_packet(packet)
 
-        x, y, z = my_pos[0], my_pos[1], my_pos[2]
+        print(f"Set home location to: {x}, {y}, {z}")
 
         now = datetime.now()
         dt_str = now.strftime("%m/%d/%Y %H:%M:%S")
